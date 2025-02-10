@@ -1,3 +1,4 @@
+import json
 import fastapi.params
 from fastapi import FastAPI
 from fastapi.params import Body
@@ -31,9 +32,30 @@ def get_posts():
     return {"post": "img.jpg"}
 
 
-@app.post("/createposts")
+@app.post("/create_posts")
 #return a payload variable which is a dict containing json data
 #retrieved from the body of the http header in a post request
 def return_message(payload: dict = fastapi.params.Body(...)):
+    try:
+        file_path = "user_data.json"
+        if not os.path.exists(file_path):
+            with open(file_path, "w") as file:
+                json.dump(payload,file)
+
+            with open(file_path, "r+") as file:
+                #output json file must be list and anything to append must be a list
+                output = json.load(file)
+                if isinstance(output, list):
+                    output.append(payload)
+                else:
+                    output = [payload]
+                file.seek(0)  # go to the top
+                json.dump(payload, file, indent=4) #dump data
+                file.truncate()
+    except Exception as  e:
+        print(f"error with {e}")
     print(payload)
-    return {"message":"post created!"}
+    return {"completed post"}
+
+#we need to validate what data the user is providing, so we have to provide a schema or
+#a structured way to get the information from the user
