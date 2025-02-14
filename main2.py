@@ -47,7 +47,7 @@ async def new_post(post: PostSchema):
         post_dict["id"] = id_check(id_gen())
 
 
-        output.append([post_dict])
+        output.append(post_dict)
 
         with open(FILE_PATH, "w") as file:
             json.dump(output, file, indent=4)
