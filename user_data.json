@@ -1,0 +1,11 @@
+{
+    "user": {
+        "name": "user2",
+        "pass": "mypass2",
+        "date_created": "10-02-25"
+    },
+    "account": {
+        "name": "mynewacc234__",
+        "value": "23356"
+    }
+}
