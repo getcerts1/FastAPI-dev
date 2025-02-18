@@ -28,7 +28,7 @@ async def get_info(id:str):
 
 
 
-@app.post("/post", status_code=status.HTTP_202_ACCEPTED)
+@app.post("/posts", status_code=status.HTTP_202_ACCEPTED)
 async def new_post(post: PostSchema):
     try:
         if os.path.exists(FILE_PATH):
