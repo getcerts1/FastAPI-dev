@@ -62,7 +62,7 @@ async def new_post(post: PostSchema):
 
 
 
-@app.delete("/delete_post/{id}")
+@app.delete("/del/{id}")
 async def delete(id:str):
     try:
         with open(FILE_PATH, "r") as file:
