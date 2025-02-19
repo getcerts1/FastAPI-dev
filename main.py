@@ -1,61 +1,116 @@
-import json
-import fastapi.params
-from fastapi import FastAPI
-from fastapi.params import Body
-import os
+from fastapi import FastAPI, HTTPException, status
+import psycopg2
+from psycopg2.extras import RealDictCursor #provides column name and allows you to map column name to value
+from pydantic import BaseModel
+from typing import Optional
+from Classes import id_check, id_gen
+from passwds import PASSWORD
+import time
 
-a_list = [4, 5, 6]
-b_list = [5, 6, 7]
-c_list = [6, 7, 8]
-
-new_list = []
-for a, b, c in zip(a_list, b_list, c_list):
-    if a%2 == 0 or  b%2 == 0 or  c%2 == 0:
-        new_list.append((a,b,c))
+HOST = "localhost"
+DATABASE = "firstdatabase"
+USER = "postgres"
 
 
-app = FastAPI()
-
-"""specify the api instance, remember APIs are
-tasked with handling data requests and responses.
-Next specify the method or the request type,
-the API can deal with different request types.
-Finally the endpoint, where will the api trigger
-the response from. Together this is called a decorator.
-"""
-@app.get("/intro")
-async def get_user():
-    return {f"'user': 'u'"}
-
-@app.get("/posts")
-def get_posts():
-    return {"post": "img.jpg"}
+app = FastAPI() #Create the app instance
 
 
-@app.post("/create_posts")
-#return a payload variable which is a dict containing json data
-#retrieved from the body of the http header in a post request
-def return_message(payload: dict = fastapi.params.Body(...)):
+#create the schema with which users can request within
+class PostSchema(BaseModel):
+    title:str
+    content:str
+    rating: Optional[int] = None
+
+
+#establish a connection to the database
+while True:
     try:
-        file_path = "user_data.json"
-        if not os.path.exists(file_path):
-            with open(file_path, "w") as file:
-                json.dump(payload,file)
+        conn = psycopg2.connect(host=HOST, database=DATABASE, user=USER, password=PASSWORD, cursor_factory=RealDictCursor)
+        print("database connection was success")
+        break
 
-            with open(file_path, "r+") as file:
-                #output json file must be list and anything to append must be a list
-                output = json.load(file)
-                if isinstance(output, list):
-                    output.append(payload)
-                else:
-                    output = [payload]
-                file.seek(0)  # go to the top
-                json.dump(payload, file, indent=4) #dump data
-                file.truncate()
-    except Exception as  e:
-        print(f"error with {e}")
-    print(payload)
-    return {"completed post"}
+    except Exception as connection_error:
+        print("Connection failed: Try again")
+        print(f"Error: {connection_error}")
+        time.sleep(2)
 
-#we need to validate what data the user is providing, so we have to provide a schema or
-#a structured way to get the information from the user
+
+@app.get("/get_post/{id}", status_code=status.HTTP_200_OK)
+async def get_post(id:int):
+    cursor = conn.cursor() #This allows you to create the cursor with which to interact with the postgres database
+    cursor.execute(f'SELECT * FROM posts WHERE \"PID\" = {id} ') #Execute the command you want to do by performing the SQL query
+    data = cursor.fetchall() #fetches data in the form of json
+    if not data:
+        return {"message: post does not exist"}
+
+    return data
+
+
+
+@app.post("/create_post")
+async def create_post(post: PostSchema): #when the client sends the http request the raw data in the body has to follow the schema
+    post_dict = post.model_dump()
+    cursor = conn.cursor()
+
+    if post_dict["rating"]:
+        try:
+            cursor.execute(
+                '''
+                INSERT INTO posts (title, content, rating)
+                VALUES (%s, %s, %s)
+                RETURNING *;
+                ''',
+                (post_dict["title"], post_dict["content"], post_dict["rating"])
+            )
+            conn.commit() #commit post to the sql db
+            data = cursor.fetchall()
+            return {"message":"post created successfully"}, data
+
+        except Exception as error:
+            return {f"Error {error}"}, status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    else:
+        try:
+            cursor.execute(
+                '''
+                INSERT INTO posts (title, content)
+                VALUES (%s, %s)
+                RETURNING *;
+                ''',
+                (post_dict["title"], post_dict["content"])
+            )
+            conn.commit()
+            data = cursor.fetchall()
+            return data
+
+        except Exception as error:
+            return {f'"message": "There was an error: {error}"'}
+
+
+
+
+@app.delete("/delete_post/{id}")
+async def delete(id: int):
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            '''
+            DELETE FROM posts WHERE "PID" = %s RETURNING *;
+            ''',
+            (id,)
+        )
+
+        deleted_post = cursor.fetchone()
+
+        if deleted_post is None:
+            raise HTTPException(status_code=404, detail="Post not found")
+
+        conn.commit()
+        return ({"message": "Delete successful", "deleted_post_id": id},
+                {"data":deleted_post})
+
+    except Exception as error:
+        conn.rollback()  # Rollback in case of an error
+        return {"error": str(error)}
+
+
