@@ -36,12 +36,12 @@ while True:
 
 
 @app.get("/get_post/{id}", status_code=status.HTTP_200_OK)
-async def get_post(id:int):
+async def get_post(id:str):
     cursor = conn.cursor() #This allows you to create the cursor with which to interact with the postgres database
     cursor.execute(f'SELECT * FROM posts WHERE \"PID\" = {id} ') #Execute the command you want to do by performing the SQL query
-    data = cursor.fetchall() #fetches data in the form of json
+    data = cursor.fetchone() #fetches data in the form of json
     if not data:
-        return {"message: post does not exist"}
+        return {"message: post with id does not exist"}
 
     return data
 
@@ -49,18 +49,22 @@ async def get_post(id:int):
 
 @app.post("/create_post")
 async def create_post(post: PostSchema): #when the client sends the http request the raw data in the body has to follow the schema
+    id = id_check(id_gen())
     post_dict = post.model_dump()
+    post_dict["PID"] = id
+    print((post_dict["PID"]))
+
     cursor = conn.cursor()
 
     if post_dict["rating"]:
         try:
             cursor.execute(
                 '''
-                INSERT INTO posts (title, content, rating)
+                INSERT INTO posts (title, content, rating, "PID")
                 VALUES (%s, %s, %s)
                 RETURNING *;
                 ''',
-                (post_dict["title"], post_dict["content"], post_dict["rating"])
+                (post_dict["title"], post_dict["content"], post_dict["rating"], post_dict["PID"])
             )
             conn.commit() #commit post to the sql db
             data = cursor.fetchall()
@@ -73,11 +77,11 @@ async def create_post(post: PostSchema): #when the client sends the http request
         try:
             cursor.execute(
                 '''
-                INSERT INTO posts (title, content)
-                VALUES (%s, %s)
+                INSERT INTO posts (title, content, "PID")
+                VALUES (%s, %s, %s)
                 RETURNING *;
                 ''',
-                (post_dict["title"], post_dict["content"])
+                (post_dict["title"], post_dict["content"], post_dict["PID"])
             )
             conn.commit()
             data = cursor.fetchall()
@@ -89,7 +93,7 @@ async def create_post(post: PostSchema): #when the client sends the http request
 
 
 
-@app.delete("/delete_post/{id}")
+@app.delete("/delete_post/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete(id: int):
     cursor = conn.cursor()
     try:
@@ -114,3 +118,38 @@ async def delete(id: int):
         return {"error": str(error)}
 
 
+@app.put("/edit_post/{id}")
+async def edit_post(id:str, post:PostSchema):
+    cursor = conn.cursor()
+    post_dict = post.model_dump()
+
+    if post_dict["rating"]:
+        cursor.execute("""
+        UPDATE posts SET title = %s, content = %s, rating = %s WHERE "PID" = %s
+        RETURNING *
+        """, (post_dict["title"], post_dict["content"], post_dict["rating"],
+              id))
+
+        conn.commit()
+
+        edited_post = cursor.fetchone()
+        if not edited_post:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No post found")
+
+
+        return {"Message","successfully edited post"}, edited_post
+
+    else:
+        cursor.execute("""
+                UPDATE posts SET title = %s, content = %s WHERE "PID" = %s
+                RETURNING *
+                """, (post_dict["title"], post_dict["content"],
+                      id))
+
+        conn.commit()
+
+        edited_post = cursor.fetchone()
+        if not edited_post:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No post found")
+
+        return {"Message", "successfully edited post"}, edited_post
