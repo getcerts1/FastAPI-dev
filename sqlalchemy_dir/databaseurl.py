@@ -1,0 +1,1 @@
+DATABASE_URL = "postgresql://postgres:postgreuser@localhost:5432/firstdatabase"
