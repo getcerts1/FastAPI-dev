@@ -1,0 +1,30 @@
+1) Establish your connection with the postgres database. Using an ORM abstraction layer, the fastapi application
+    communicates with the ORM rather than directly with the the SQL database. This seperation allows the use of native
+    python data types, objects and classes to form the tables and to populate them without having to actually perform
+    any SQL querying.
+
+
+2) The connection is established with an engine that connects using the connection string and a localsession which allows
+    for the persistent storing into memory the querying and manipulation of the database. Finally the declarative base
+    which allows you to declare the schema with which to create your databases, tables and columns. The metadata which
+    inherits from the Base is used to create/modify tables. The get_db function reinitializes the connection to your
+    database once a request is sent again
+
+3) The models file is where we create the schema for our tables and export to files such as crud file for querying and
+    manipulating.
+
+4) Here we create the schema for our request arriving at our endpoint and the response that leaves our endpoint. Using
+    Basemodel we can verify the schema of the request and response data in both directions.
+
+
+
+5) The crud file is the heart of our operation. It performs the logic to get the information from the database and return
+    it to the api where it is then sent back with a response model following our schema.
+
+
+
+6) The API endpoint. Here we specifiy the route, the response_model in accordance with our response schema, the function,
+    the http request schema (for POST and PATCH), the initial session saved as db depending on the return of get_db which
+    it self is based on our session_maker which is bound to the engine that connects to our database. Then the crud
+    operation by calling the crud file and the relevant function to perform the query/manipulation which then returns an
+    output. This output is then returned to the client request maker in a schema specified by the response.
