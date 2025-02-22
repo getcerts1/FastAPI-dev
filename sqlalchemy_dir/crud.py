@@ -14,8 +14,6 @@ def test_posts(db: Session):
     return output
 
 
-
-
 def get_posts_id(db: Session, post_id: int):
     """Retrieve a post by its ID"""
     try:
@@ -93,3 +91,25 @@ def update_user(db: Session, user_schema: schemas.UserRequest, user_id:int):
     db.commit()
     db.refresh(selected_post)
     return selected_post
+
+
+""" --- DELETE REQUESTS --- """
+
+def delete_post(db: Session, post_id:int):
+    selected_post = db.query(Posts).filter(Posts.PID == post_id).first()
+
+    db.delete(selected_post)
+    db.commit()
+    db.refresh(selected_post)
+    return selected_post
+
+
+
+
+def delete_user(db: Session, user_id: int):
+    selected_user = db.query(Users).filter(Users.UID == user_id).first
+
+    db.delete(selected_user)
+    db.commit()
+    db.refresh(selected_user)
+    return selected_user

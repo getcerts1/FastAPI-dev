@@ -28,3 +28,6 @@
     it self is based on our session_maker which is bound to the engine that connects to our database. Then the crud
     operation by calling the crud file and the relevant function to perform the query/manipulation which then returns an
     output. This output is then returned to the client request maker in a schema specified by the response.
+
+
+7)In order to do changes to the tables or the schema, you will want to use alembic
