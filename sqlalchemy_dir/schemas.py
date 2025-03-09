@@ -3,7 +3,7 @@ This file deals with the schema for the request and response by the client and a
 
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 
@@ -26,15 +26,14 @@ class PostResponse(BaseModel):
 
 
 class UserRequest(BaseModel):
-    first_name: str
-    last_name: str
-    email: Optional[str] = None  # Nullable email with proper validation
+    email: EmailStr
+    password: str
+
 
 class UserResponse(BaseModel):
     UID: int
-    first_name: str
-    last_name: str
-    email: Optional[str] = None  # Nullable email with proper validation
+    email: str
+    password: str
     time_created: datetime
 
 

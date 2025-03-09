@@ -1,11 +1,15 @@
 """
 This post is where all your logic handling takes place, querying and manipulating the database tables.
 """
+from http.client import HTTPException
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from models import Posts, Users #import table schemas from models
+from passlib.context import CryptContext #passlib ensures the hashing of passwords
 import schemas
+from utils import hashpass
+
 
 """ --- GET REQUESTS ---"""
 
@@ -58,9 +62,12 @@ def add_new_user(db: Session, user_data: schemas.UserRequest):
     """
 
     if user_data.email and "@company" not in user_data.email:
-        return {"message":"Wrong email syntax"}
+        return {"message":"Wrong email syntax, please enter a correct email"}
 
-    db_user = Users(first_name=user_data.first_name,last_name=user_data.last_name,email=user_data.email)
+
+    hashed_pass = hashpass(user_data.password)
+    user_data.password = hashed_pass
+    db_user = Users(**user_data.model_dump())
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
